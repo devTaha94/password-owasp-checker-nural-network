@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>Smart Password Validation</title>
+</head>
+<body class="text-center">
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <a class="navbar-brand" href="#">Smart Password Checker App</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item active">
+            </li>
+            <!-- Add additional navbar items as needed -->
+        </ul>
+    </div>
+</nav>
+<div class="container mt-5 pt-5">
+    <div class="row">
+        <div class="col-6">
+            <h2 class="mb-4">Password Validation</h2>
+            <div id="warning" class="alert alert-warning d-none" role="alert">
+                <strong>Similar password detected. Please choose a unique one.</strong>
+                The application is trained with the help of Machine learning algorithms. Datasets of passwords that were
+                leaked in past attacks.
+            </div>
+            <div id="info-text" class="alert alert-info d-none" role="alert">
+
+            </div>
+            <form id="passwordForm">
+                <div class="form-group">
+                    <input required type="text" class="form-control" id="username" placeholder="Username">
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" placeholder="Password">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary" id="togglePassword">Show</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-dark" id="checkPassword">Check Password</button>
+                    <!-- Display thumbs up for a strong password -->
+                    <span id="thumbsUpIcon" class="text-success" style="font-size: 20px"></span>
+                </div>
+            </form>
+
+            <div class="mt-5"></div>
+            <!-- Display individual requirements -->
+            <h5 class="text-left msg-head">Password Requirements:</h5>
+            <ul>
+                <li id="lengthRequirement" class="text-secondary text-left msg">At least 10 characters</li>
+                <li id="uppercaseRequirement" class="text-secondary text-left msg">At least one uppercase letter</li>
+                <li id="numberRequirement" class="text-secondary text-left msg">At least one number</li>
+                <li id="specialCharRequirement" class="text-secondary text-left msg">At least one special character</li>
+                <li id="noSequentialChars" class="text-secondary text-left msg">No sequential characters (e.g., abc)
+                </li>
+                <li id="noRepeatingChars" class="text-secondary text-left msg">No repeating characters (e.g., 111)</li>
+                <li id="noUsernameParts" class="text-secondary text-left msg">Avoid parts of the username</li>
+                <li id="maxLengthRequirement" class="text-secondary text-left msg">Fewer than 128 characters.</li>
+            </ul>
+
+        </div>
+        <!-- Requirement 3 -->
+        <div class="col-6">
+            <div class="alert alert-info text-justify" role="alert">
+                <strong>Notes:</strong> Consider using a passphrase for better security. A
+                passphrase is a sequence of words or a sentence designed to be easier to remember than complex
+                passwords. You can use common words or a combination of words in a sentence to make them more memorable.
+                Feel free to include spaces between words and incorporate special characters for added complexity. Aim
+                for at least 20 characters, including a mix of uppercase letters, numbers, and special characters.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+
+        // Toggle password visibility
+        $("#togglePassword").click(function () {
+            var passwordInput = $("#password");
+            var type = passwordInput.attr("type") === "password" ? "text" : "password";
+            passwordInput.attr("type", type);
+            $(this).text(type === "password" ? "Show" : "Hide");
+        });
+
+        // Validate username to accept only English letters
+        $("#username").on("input", function () {
+            var regex = /^[a-zA-Z0-9]+$/; // Allow letters and numbers
+            var value = $(this).val();
+            if (!regex.test(value)) {
+                $(this).val(value.replace(/[^a-zA-Z0-9]/g, ''));
+            }
+        });
+
+        // Check password button click event
+        $("#checkPassword").click(function () {
+
+            let username = $("#username").val();
+            let password = $("#password").val();
+
+            if (username.trim() === "" || password.trim() === "") {
+                alert("Please fill in both username and password.");
+                return;
+            }
+            // Make an AJAX request to the Node.js server
+            $.post("/validatePassword", {username: username, password: password}, function (response) {
+
+                $(".msg").css("display", 'list-item');
+                $(".msg-head").css("display", 'block');
+
+                if (response.isSimilarPassword !== undefined && response.isSimilarPassword === true) {
+                    $("#warning").removeClass('d-none');
+                } else {
+                    $("#warning").addClass('d-none');
+                }
+
+                $("#info-text").removeClass('d-none');
+                $("#info-text").text(response.PredictedSummary);
+
+                if (response.thumbsUp !== undefined && response.thumbsUp === true) {
+                    // Display a thumbs up or any other positive feedback
+                    if (response.isPassphrase) {
+                        $(".msg").css("display", 'none');
+                        $(".msg-head").css("display", 'none');
+                        $("#thumbsUpIcon").html('<span class="text-success">&#x1F44D; Passphrase Password!</span>');
+                    } else {
+                        $("#thumbsUpIcon").html('<span class="text-success">&#x1F44D; Strong Password!</span>');
+                    }
+                } else {
+                    $("#thumbsUpIcon").html('<span class="text-danger">❌ Weak Password!</span>');
+                }
+                var requirements = response;
+                // Update the UI based on the server's response
+                $("#lengthRequirement").toggleClass("text-danger", !requirements.lengthRequirement).toggleClass("text-success", requirements.lengthRequirement);
+                $("#uppercaseRequirement").toggleClass("text-danger", !requirements.uppercaseRequirement).toggleClass("text-success", requirements.uppercaseRequirement);
+                $("#numberRequirement").toggleClass("text-danger", !requirements.numberRequirement).toggleClass("text-success", requirements.numberRequirement);
+                $("#specialCharRequirement").toggleClass("text-danger", !requirements.specialCharRequirement).toggleClass("text-success", requirements.specialCharRequirement);
+                $("#noSequentialChars").toggleClass("text-danger", !requirements.noSequentialChars).toggleClass("text-success", requirements.noSequentialChars);
+                $("#noRepeatingChars").toggleClass("text-danger", !requirements.noRepeatingChars).toggleClass("text-success", requirements.noRepeatingChars);
+                $("#noUsernameParts").toggleClass("text-danger", !requirements.noUsernameParts).toggleClass("text-success", requirements.noUsernameParts);
+                $("#maxLengthRequirement").toggleClass("text-danger", !requirements.maxLengthRequirement).toggleClass("text-success", requirements.maxLengthRequirement);
+
+            });
+        });
+
+        function updateButtonState() {
+            var username = $("#username").val();
+            var password = $("#password").val();
+            var isAnyInputEmpty = username === "" || password === "";
+            $("#checkPassword").prop("disabled", isAnyInputEmpty);
+        }
+
+        // Bind input events to the updateButtonState function
+        $("#username, #password").on("input", updateButtonState);
+
+    });
+</script>
+
+</body>
+</html>
